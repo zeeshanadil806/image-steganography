@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steganography Tool</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin-top: 50px;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .image-preview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .nav-tabs .nav-link {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .tab-content {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <h2 class="mb-4">🔐 Steganography Tool</h2>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="stegTabs">
+            <li class="nav-item">
+                <a class="nav-link active" id="encodeTab" href="#">Encode</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="decodeTab" href="#">Decode</a>
+            </li>
+        </ul>
+
+        <!-- Encode Section -->
+        <div id="encodeSection" class="tab-content">
+            <h4 class="mt-4">Encode Message</h4>
+            <div class="mb-3">
+                <label class="form-label"><b>Select Image</b></label>
+                <input type="file" class="form-control" id="encodeFileInput">
+                <img id="encodeSelectedImage" class="image-preview d-none">
+            </div>
+            <input type="text" id="message" class="form-control mb-2" placeholder="Enter message">
+            <button class="btn btn-primary mt-2" onclick="encodeImage()">Encode</button>
+            <a id="downloadLink" class="btn btn-success mt-2 d-none" download>Download Stego Image</a>
+        </div>
+
+        <!-- Decode Section (Initially Hidden) -->
+        <div id="decodeSection" class="tab-content d-none">
+            <h4 class="mt-4">Decode Hidden Message</h4>
+            <div class="mb-3">
+                <label class="form-label"><b>Select Image</b></label>
+                <input type="file" class="form-control" id="decodeFileInput">
+                <img id="decodeSelectedImage" class="image-preview d-none">
+            </div>
+            <button class="btn btn-warning mt-2" onclick="decodeImage()">Decode</button>
+            <p id="decodedMessage" class="mt-2"></p>
+        </div>
+    </div>
+
+    <script>
+        let uploadedEncodeFilePath = "";
+        let uploadedDecodeFilePath = "";
+
+        // Handle Encode Image Upload
+        $("#encodeFileInput").change(function(event) {
+            let file = event.target.files[0];
+            let formData = new FormData();
+            formData.append("file", file);
+
+            $.ajax({
+                url: "/upload",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    uploadedEncodeFilePath = response;
+                    $("#encodeSelectedImage").attr("src", response).removeClass("d-none");
+                },
+                error: function() {
+                    alert("❌ Error uploading file");
+                }
+            });
+        });
+
+        // Handle Decode Image Upload
+        $("#decodeFileInput").change(function(event) {
+            let file = event.target.files[0];
+            let formData = new FormData();
+            formData.append("file", file);
+
+            $.ajax({
+                url: "/upload",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    uploadedDecodeFilePath = response;
+                    $("#decodeSelectedImage").attr("src", response).removeClass("d-none");
+                },
+                error: function() {
+                    alert("❌ Error uploading file");
+                }
+            });
+        });
+
+        // Encode Function
+        function encodeImage() {
+            let message = $("#message").val();
+            if (!uploadedEncodeFilePath || !message) {
+                alert("❌ Please upload an image and enter a message!");
+                return;
+            }
+
+            $.post("/encode", { image_path: uploadedEncodeFilePath, message: message }, function(response) {
+                if (response.startsWith("❌")) {
+                    alert(response);
+                } else {
+                    $("#downloadLink").attr("href", response).removeClass("d-none");
+                }
+            });
+        }
+
+        // Decode Function
+        function decodeImage() {
+            if (!uploadedDecodeFilePath) {
+                alert("❌ Please upload an image first!");
+                return;
+            }
+
+            $.post("/decode", { image_path: uploadedDecodeFilePath }, function(response) {
+                $("#decodedMessage").text("Decoded Message: " + response);
+            });
+        }
+
+        // Tab Switching Logic
+        $("#encodeTab").click(function() {
+            $("#encodeSection").removeClass("d-none");
+            $("#decodeSection").addClass("d-none");
+            $("#encodeTab").addClass("active");
+            $("#decodeTab").removeClass("active");
+        });
+
+        $("#decodeTab").click(function() {
+            $("#decodeSection").removeClass("d-none");
+            $("#encodeSection").addClass("d-none");
+            $("#decodeTab").addClass("active");
+            $("#encodeTab").removeClass("active");
+        });
+    </script>
+</body>
+</html>
